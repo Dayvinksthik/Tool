@@ -1,152 +1,824 @@
-# Roblox Auto Rejoin — KOALA Edition
-# Protected build — do not redistribute or resell.
-import zlib as _z, base64 as _b
+#!/usr/bin/env python3
+"""
+Roblox Auto Rejoin Tool — KOALA
+For rooted Android / Termux.
+"""
 
-_k = b"K0ALA_EDITION_XOR_K3Y_2025"
-_d = _b.b64decode("".join([
-    "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",
-]))
-_x = bytes(_v ^ _k[_i % len(_k)] for _i, _v in enumerate(_d))
-exec(compile(_z.decompress(_x).decode(), "<Rejoiner>", "exec"))
+import os
+import sys
+import time
+import json
+import shutil
+import threading
+import subprocess
+import requests
+from datetime import datetime
+
+# ── ANSI COLORS ────────────────────────────────────────────────────────────────
+R   = "\033[0m"
+CY  = "\033[96m"
+GR  = "\033[92m"
+YL  = "\033[93m"
+RD  = "\033[91m"
+BL  = "\033[94m"
+DIM = "\033[2m"
+BO  = "\033[1m"
+CLS = "\033[2J\033[H"
+
+# ── CONSTANTS ──────────────────────────────────────────────────────────────────
+ACCOUNTS_FILE    = "/sdcard/roblox_accounts.json"
+DEFAULT_PACKAGE  = "com.roblox.client"
+COOLDOWN_SECONDS = 30
+WEBHOOK_COOLDOWN = 15
+DISPLAY_INTERVAL = 5.0
+RAM_CACHE_TTL    = 5.0
+
+# ── GLOBALS ────────────────────────────────────────────────────────────────────
+platform_info          = None
+account_threads        = {}
+account_running        = {}
+account_status         = {}
+account_last_focus     = {}
+account_focus_count    = {}
+roblox_username_cache  = {}
+display_running        = False
+display_fps            = 0.0
+automation_enabled     = False
+lock = threading.Lock()
+_ram_cache = {"value": 0, "time": 0}
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  ASCII ART — KOALA
+# ══════════════════════════════════════════════════════════════════════════════
+KOALA_ART = [
+    "██╗  ██╗ ██████╗  █████╗ ██╗      █████╗ ",
+    "██║ ██╔╝██╔═══██╗██╔══██╗██║     ██╔══██╗",
+    "█████╔╝ ██║   ██║███████║██║     ███████║",
+    "██╔═██╗ ██║   ██║██╔══██║██║     ██╔══██║",
+    "██║  ██╗╚██████╔╝██║  ██║███████╗██║  ██║",
+    "╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝",
+]
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  PLATFORM DETECTION
+# ══════════════════════════════════════════════════════════════════════════════
+class PlatformDetector:
+    def detect_platform(self):
+        if self._check_root():
+            return {"type": "rooted", "has_root": True}
+        return {"type": "unrooted", "has_root": False}
+
+    def _check_root(self):
+        try:
+            r = subprocess.run(["su", "-c", "echo test"],
+                               capture_output=True, text=True, timeout=5)
+            return "test" in r.stdout
+        except Exception:
+            return False
+
+
+def run_cmd(command, timeout=10):
+    try:
+        if platform_info and platform_info.get("has_root"):
+            full = f"su -c '{command}'"
+        else:
+            full = command
+        r = subprocess.run(full, shell=True, capture_output=True,
+                           text=True, timeout=timeout)
+        return r.stdout.strip()
+    except subprocess.TimeoutExpired:
+        return ""
+    except Exception:
+        return ""
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  ROBLOX USERNAME LOOKUP
+# ══════════════════════════════════════════════════════════════════════════════
+def fetch_roblox_username(user_id):
+    if not user_id:
+        return None
+    try:
+        resp = requests.get(f"https://users.roblox.com/v1/users/{user_id}", timeout=8)
+        if resp.status_code == 200:
+            data = resp.json()
+            return data.get("name")
+    except Exception:
+        pass
+    return None
+
+
+def prefetch_usernames(accounts):
+    for acc in accounts:
+        name    = acc["name"]
+        user_id = acc.get("roblox_user_id", "").strip()
+        if user_id and name not in roblox_username_cache:
+            uname = fetch_roblox_username(user_id)
+            with lock:
+                roblox_username_cache[name] = uname or acc["name"]
+        elif not user_id:
+            with lock:
+                roblox_username_cache[name] = acc["name"]
+
+
+def get_display_username(acc):
+    with lock:
+        return roblox_username_cache.get(acc["name"], acc["name"])
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  ACCOUNT MANAGEMENT
+# ══════════════════════════════════════════════════════════════════════════════
+def load_accounts():
+    if not os.path.exists(ACCOUNTS_FILE):
+        return []
+    try:
+        with open(ACCOUNTS_FILE, "r") as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+
+def save_accounts(accounts):
+    try:
+        with open(ACCOUNTS_FILE, "w") as f:
+            json.dump(accounts, f, indent=4)
+        run_cmd(f"chmod 644 {ACCOUNTS_FILE}")
+        return True
+    except Exception:
+        return False
+
+
+def add_account(name, package=DEFAULT_PACKAGE, game_id="",
+                private_server_link="", webhook_url="",
+                check_interval=60, retry_attempts=3,
+                retry_delay=10, freeze_threshold=3, roblox_user_id=""):
+    accounts = load_accounts()
+    if any(a["name"] == name for a in accounts):
+        return False
+    accounts.append({
+        "name": name, "package": package,
+        "game_id": game_id, "private_server_link": private_server_link,
+        "webhook_url": webhook_url, "check_interval": check_interval,
+        "retry_attempts": retry_attempts, "retry_delay": retry_delay,
+        "freeze_threshold": freeze_threshold, "roblox_user_id": roblox_user_id,
+    })
+    save_accounts(accounts)
+    return True
+
+
+def remove_account(name):
+    save_accounts([a for a in load_accounts() if a["name"] != name])
+
+
+def update_account(name, updates):
+    accounts = load_accounts()
+    for i, a in enumerate(accounts):
+        if a["name"] == name:
+            accounts[i].update(updates)
+            save_accounts(accounts)
+            return True
+    return False
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  ROBLOX STATE
+# ══════════════════════════════════════════════════════════════════════════════
+def is_roblox_running(package):
+    if run_cmd(f"pidof {package}").strip():
+        return True
+    return bool(run_cmd(f"ps | grep {package} | grep -v grep").strip())
+
+
+def get_current_focus():
+    return run_cmd("dumpsys window | grep mCurrentFocus")
+
+
+GAME_ACTIVITIES = [
+    "UnityPlayerActivity",
+    "GameActivity",
+    "NativeActivity",
+    "ActivityNativeMain",
+]
+
+MENU_ACTIVITIES = [
+    "ActivitySplash", "SplashActivity",
+    "ActivityLogin",  "LoginActivity",
+    "LaunchActivity", "MainActivity",
+    "ActivitySocialSlot",
+]
+
+def _dumpsys_activity(timeout=20):
+    return run_cmd("dumpsys activity", timeout=timeout) or ""
+
+
+def is_in_game(package):
+    if not is_roblox_running(package):
+        return False
+
+    dump = _dumpsys_activity()
+
+    for keyword in ("mResumedActivity", "mFocusedActivity", "mLastPausedActivity"):
+        for line in dump.splitlines():
+            if keyword in line and package in line:
+                if any(a in line for a in GAME_ACTIVITIES):
+                    return True
+                if any(a in line for a in MENU_ACTIVITIES):
+                    return False
+
+    focus = get_current_focus()
+    if focus and package in focus:
+        if any(a in focus for a in GAME_ACTIVITIES):
+            return True
+        if any(a in focus for a in MENU_ACTIVITIES):
+            return False
+
+    in_pkg_task = False
+    for line in dump.splitlines():
+        if package in line:
+            in_pkg_task = True
+        if in_pkg_task:
+            if any(a in line for a in GAME_ACTIVITIES):
+                return True
+            if any(a in line for a in MENU_ACTIVITIES):
+                return False
+        if in_pkg_task and ("* Task{" in line or "* TaskRecord" in line) and package not in line:
+            in_pkg_task = False
+
+    return True
+
+
+def _get_pid(package):
+    out = run_cmd(f"pidof {package}") or run_cmd(f"ps -A | grep {package}")
+    if out:
+        for token in out.split():
+            if token.isdigit():
+                return token
+    return None
+
+
+def _read_cpu_jiffies(pid):
+    try:
+        with open(f"/proc/{pid}/stat") as f:
+            fields = f.read().split()
+        return int(fields[13]) + int(fields[14])
+    except Exception:
+        return None
+
+
+def is_frozen(package, threshold):
+    if not is_roblox_running(package):
+        with lock:
+            account_focus_count[package] = 0
+            account_last_focus[package]  = None
+        return False
+
+    pid = _get_pid(package)
+    jiffies = _read_cpu_jiffies(pid) if pid else None
+
+    with lock:
+        prev_jiffies = account_last_focus.get(package)
+        count        = account_focus_count.get(package, 0)
+
+        if jiffies is None:
+            focus = get_current_focus()
+            if focus and package in focus:
+                if focus == prev_jiffies:
+                    count += 1
+                else:
+                    count = 0
+            account_last_focus[package]  = focus
+            account_focus_count[package] = count
+            return count >= threshold
+
+        if prev_jiffies is not None and jiffies == prev_jiffies:
+            count += 1
+        else:
+            count = 0
+
+        account_last_focus[package]  = jiffies
+        account_focus_count[package] = count
+        return count >= threshold
+
+
+def force_stop(package):
+    run_cmd(f"am force-stop {package}")
+    run_cmd(f"pkill -f {package}")
+    time.sleep(3)
+
+
+def launch_roblox(package, game_id, private_server_link=""):
+    url = private_server_link if private_server_link else \
+          f"roblox://experiences/start?placeId={game_id}"
+    run_cmd(f'am start -a android.intent.action.VIEW -d "{url}"')
+    time.sleep(5)
+    if is_roblox_running(package):
+        return True
+    time.sleep(3)
+    run_cmd(f"monkey -p {package} 1")
+    time.sleep(5)
+    return is_roblox_running(package)
+
+
+def rejoin_game(cfg, name):
+    package = cfg["package"]
+    game_id = cfg.get("game_id", "")
+    ps_link = cfg.get("private_server_link", "")
+
+    if not game_id and not ps_link:
+        set_status(name, "No Game ID")
+        return False
+
+    cooldown_key = f"__rejoin_{package}"
+    now = time.time()
+    with lock:
+        last = account_last_focus.get(cooldown_key, 0)
+        if now - last < COOLDOWN_SECONDS:
+            return False
+        account_last_focus[cooldown_key] = now
+
+    retry_delay = cfg.get("retry_delay", 10)
+    attempt = 0
+
+    while account_running.get(name, False):
+        attempt += 1
+
+        set_status(name, f"Killing... ({attempt})")
+        force_stop(package)
+        time.sleep(3)
+
+        set_status(name, f"Rejoining ({attempt})")
+        if launch_roblox(package, game_id, ps_link):
+            set_status(name, f"Loading... ({attempt})")
+            time.sleep(18)
+
+            if is_in_game(package):
+                set_status(name, "In-Game")
+                return True
+
+        set_status(name, f"Retrying... ({attempt})")
+        time.sleep(retry_delay)
+
+    return False
+
+
+def send_webhook(url, message, name=None):
+    if not url:
+        return
+    key = f"__wh_{name or 'g'}"
+    with lock:
+        last = account_last_focus.get(key, 0)
+        if time.time() - last < WEBHOOK_COOLDOWN:
+            return
+        account_last_focus[key] = time.time()
+    try:
+        requests.post(url, json={"content": message}, timeout=5)
+    except Exception:
+        pass
+
+
+def set_status(name, status):
+    with lock:
+        account_status[name] = status
+
+
+def automation_loop(cfg):
+    name      = cfg["name"]
+    package   = cfg["package"]
+    interval  = cfg.get("check_interval", 60)
+    threshold = cfg.get("freeze_threshold", 3)
+    webhook   = cfg.get("webhook_url", "")
+
+    set_status(name, "Initializing")
+    time.sleep(2)
+
+    while account_running.get(name, False):
+        try:
+            running = is_roblox_running(package)
+            ingame  = is_in_game(package)
+
+            if not running:
+                set_status(name, "Not Running")
+                send_webhook(webhook, f"❌ {name}: crashed – rejoining…", name)
+                ok = rejoin_game(cfg, name)
+                send_webhook(webhook,
+                             f"✅ {name}: rejoined" if ok else f"❌ {name}: failed",
+                             name)
+            elif not ingame:
+                set_status(name, "Kicked/Disc.")
+                send_webhook(webhook, f"⚠️ {name}: kicked – rejoining…", name)
+                ok = rejoin_game(cfg, name)
+                send_webhook(webhook,
+                             f"✅ {name}: rejoined" if ok else f"❌ {name}: failed",
+                             name)
+            elif is_frozen(package, threshold):
+                set_status(name, "Frozen")
+                send_webhook(webhook, f"❄️ {name}: frozen – rejoining…", name)
+                ok = rejoin_game(cfg, name)
+                send_webhook(webhook,
+                             f"✅ {name}: rejoined" if ok else f"❌ {name}: failed",
+                             name)
+            else:
+                set_status(name, "In-Game")
+
+            for _ in range(interval):
+                if not account_running.get(name, False):
+                    break
+                time.sleep(1)
+
+        except Exception as e:
+            set_status(name, f"Error")
+            time.sleep(10)
+
+    set_status(name, "Stopped")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  LIVE DASHBOARD
+# ══════════════════════════════════════════════════════════════════════════════
+def get_ram_mb():
+    """Cached RAM read, update every RAM_CACHE_TTL seconds."""
+    global _ram_cache
+    now = time.time()
+    if now - _ram_cache["time"] < RAM_CACHE_TTL:
+        return _ram_cache["value"]
+    try:
+        out = run_cmd("cat /proc/meminfo")
+        total = used = free = 0
+        for line in out.splitlines():
+            if line.startswith("MemTotal:"):
+                total = int(line.split()[1]) // 1024
+            elif line.startswith("MemAvailable:"):
+                free = int(line.split()[1]) // 1024
+        used = total - free
+        _ram_cache = {"value": used, "time": now}
+        return used
+    except Exception:
+        return 0
+
+
+def status_color(s):
+    s = s or "?"
+    if "In-Game" in s:
+        return f"{GR}{s}{R}"
+    if any(w in s for w in ["Rejoin", "Loading", "Stopping", "Kick", "Frozen"]):
+        return f"{YL}{s}{R}"
+    if any(w in s for w in ["Failed", "Error", "Not"]):
+        return f"{RD}{s}{R}"
+    if "Stopped" in s:
+        return f"{DIM}{s}{R}"
+    return f"{CY}{s}{R}"
+
+
+def draw_dashboard(cfg_list):
+    global display_fps
+    cols = shutil.get_terminal_size((80, 24)).columns
+    sep  = f"{DIM}" + "-" * cols + f"{R}"
+
+    out = []
+    out.append("")
+    for line in KOALA_ART:
+        out.append(f"{CY}{BO}{line}{R}")
+    out.append("")
+
+    any_custom = any(c.get("private_server_link") for c in cfg_list)
+    auto_state = f"{GR}Enable{R}"  if automation_enabled else f"{DIM}Disable{R}"
+    cust_state = f"{GR}Enable{R}"  if any_custom          else f"{DIM}Disable{R}"
+
+    out.append(f"Check roblox")
+    out.append(f"Change accounts: {auto_state}")
+    out.append(f"Change accounts custom: {cust_state}")
+    out.append(f"Check UI size: {cols}")
+    out.append("")
+
+    out.append(sep)
+    ram = get_ram_mb()
+    out.append(f"FPS: {display_fps:.2f} | RAM: {ram}MB")
+    out.append(sep)
+
+    W_PKG  = 22
+    W_USER = 18
+    W_STAT = 16
+
+    hdr_pkg  = "Package".ljust(W_PKG)
+    hdr_user = "Username".ljust(W_USER)
+    hdr_stat = "Status"
+    out.append(f"{BO}{hdr_pkg}{hdr_user}{hdr_stat}{R}")
+
+    with lock:
+        statuses = dict(account_status)
+
+    for cfg in cfg_list:
+        name   = cfg["name"]
+        pkg    = cfg["package"]
+        status = statuses.get(name, "Initializing")
+        uname  = get_display_username(cfg)
+
+        pkg_str  = pkg[:W_PKG-1].ljust(W_PKG)
+        user_str = uname[:W_USER-1].ljust(W_USER)
+        stat_str = status_color(status)
+
+        out.append(f"{pkg_str}{user_str}{stat_str}")
+
+    out.append("")
+    out.append(f"{DIM}Ctrl+C → menu{R}")
+
+    print(CLS, end="")
+    print("\n".join(out))
+
+
+def display_thread_fn(cfg_list):
+    global display_fps, display_running
+    frame = 0
+    t0    = time.time()
+
+    while display_running:
+        t_start = time.time()
+        draw_dashboard(cfg_list)
+
+        frame += 1
+        elapsed = time.time() - t0
+        if elapsed > 0:
+            display_fps = frame / elapsed
+
+        sleep_rem = DISPLAY_INTERVAL - (time.time() - t_start)
+        if sleep_rem > 0:
+            time.sleep(sleep_rem)
+        time.sleep(0.05)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  AUTOMATION START / STOP
+# ══════════════════════════════════════════════════════════════════════════════
+def start_automation(account_name=None):
+    global automation_enabled
+    accounts = load_accounts()
+    if not accounts:
+        print(f"{YL}No accounts configured.{R}")
+        return
+    for acc in accounts:
+        name = acc["name"]
+        if account_name and name != account_name:
+            continue
+        if account_running.get(name):
+            continue
+        if not acc.get("game_id") and not acc.get("private_server_link"):
+            print(f"{RD}No Game ID for {name}, skipping.{R}")
+            continue
+        account_running[name] = True
+        t = threading.Thread(target=automation_loop, args=(acc,), daemon=True)
+        t.start()
+        account_threads[name] = t
+    automation_enabled = any(account_running.values())
+
+
+def stop_automation(account_name=None):
+    global automation_enabled
+    if account_name:
+        account_running[account_name] = False
+        if account_name in account_threads:
+            account_threads[account_name].join(timeout=5)
+            del account_threads[account_name]
+    else:
+        for n in list(account_running):
+            account_running[n] = False
+        for t in account_threads.values():
+            t.join(timeout=5)
+        account_threads.clear()
+    automation_enabled = any(account_running.values())
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  MENU SYSTEM (optimised)
+# ══════════════════════════════════════════════════════════════════════════════
+def clear():
+    print(CLS, end="")
+
+
+def menu_header():
+    clear()
+    for line in KOALA_ART:
+        print(f"{CY}{BO}{line}{R}")
+    root_txt = f"{GR}YES{R}" if (platform_info and platform_info.get("has_root")) \
+               else f"{RD}NO{R}"
+    print(f"\n  Root: {root_txt}\n")
+
+
+def _ask(prompt, default=""):
+    val = input(f"  {prompt} [{default}]: ").strip()
+    return val if val else default
+
+
+def manage_accounts():
+    while True:
+        accounts = load_accounts()
+        menu_header()
+        print(f"{CY}  ── MANAGE ACCOUNTS ──{R}\n")
+        for i, a in enumerate(accounts, 1):
+            st = f"{GR}RUN{R}" if account_running.get(a["name"]) else f"{DIM}STOP{R}"
+            print(f"  {i}. {a['name']}  ({a['package']})  [{st}]")
+        n = len(accounts)
+        print(f"\n  {n+1}. Add account")
+        print(f"  {n+2}. Remove account")
+        print(f"  {n+3}. Back\n")
+        choice = input(f"  {CY}Choice: {R}").strip()
+        if not choice.isdigit():
+            continue
+        idx = int(choice)
+        if 1 <= idx <= n:
+            edit_account(accounts[idx - 1])
+        elif idx == n + 1:
+            add_account_interactive()
+        elif idx == n + 2:
+            remove_account_interactive()
+        elif idx == n + 3:
+            break
+        time.sleep(0.05)
+
+
+def edit_account(acc):
+    menu_header()
+    print(f"{CY}  ── EDIT: {acc['name']} ──{R}\n")
+    acc["package"]             = _ask("Package",             acc.get("package", DEFAULT_PACKAGE))
+    acc["roblox_user_id"]      = _ask("Roblox User ID",     acc.get("roblox_user_id", ""))
+    acc["game_id"]             = _ask("Game ID",             acc.get("game_id", ""))
+    acc["private_server_link"] = _ask("Private server link", acc.get("private_server_link", ""))
+    acc["webhook_url"]         = _ask("Discord webhook",     acc.get("webhook_url", ""))
+    v = _ask("Check interval (s)", str(acc.get("check_interval", 60)))
+    acc["check_interval"]      = int(v) if v.isdigit() else acc.get("check_interval", 60)
+    v = _ask("Retry attempts",     str(acc.get("retry_attempts", 3)))
+    acc["retry_attempts"]      = int(v) if v.isdigit() else acc.get("retry_attempts", 3)
+    v = _ask("Retry delay (s)",    str(acc.get("retry_delay", 10)))
+    acc["retry_delay"]         = int(v) if v.isdigit() else acc.get("retry_delay", 10)
+    v = _ask("Freeze threshold",   str(acc.get("freeze_threshold", 3)))
+    acc["freeze_threshold"]    = int(v) if v.isdigit() else acc.get("freeze_threshold", 3)
+    update_account(acc["name"], acc)
+    uid = acc.get("roblox_user_id", "").strip()
+    if uid:
+        print(f"  {BL}Fetching Roblox username…{R}")
+        uname = fetch_roblox_username(uid)
+        with lock:
+            roblox_username_cache[acc["name"]] = uname or acc["name"]
+        print(f"  {GR}Username: {roblox_username_cache[acc['name']]}{R}")
+    print(f"\n  {GR}Saved!{R}")
+    time.sleep(1.5)
+
+
+def add_account_interactive():
+    menu_header()
+    print(f"{CY}  ── ADD ACCOUNT ──{R}\n")
+    name = input("  Account name (label): ").strip()
+    if not name:
+        return
+    uid = input("  Roblox User ID (numbers only): ").strip()
+    pkg = _ask("Package", DEFAULT_PACKAGE)
+    gid = input("  Game ID: ").strip()
+    ps  = input("  Private server link (optional): ").strip()
+    wh  = input("  Discord webhook URL (optional): ").strip()
+    iv  = _ask("Check interval (s)", "60")
+    ra  = _ask("Retry attempts",     "3")
+    rd  = _ask("Retry delay (s)",    "10")
+    ft  = _ask("Freeze threshold",   "3")
+    ok  = add_account(name, pkg, gid, ps, wh,
+                      int(iv) if iv.isdigit() else 60,
+                      int(ra) if ra.isdigit() else 3,
+                      int(rd) if rd.isdigit() else 10,
+                      int(ft) if ft.isdigit() else 3,
+                      roblox_user_id=uid)
+    if ok and uid:
+        print(f"  {BL}Fetching Roblox username…{R}")
+        uname = fetch_roblox_username(uid)
+        with lock:
+            roblox_username_cache[name] = uname or name
+        fetched = roblox_username_cache[name]
+        print(f"  {GR}Username: {fetched}{R}")
+    print(f"\n  {GR if ok else RD}{'Added!' if ok else 'Already exists.'}{R}")
+    time.sleep(1.5)
+
+
+def remove_account_interactive():
+    accounts = load_accounts()
+    if not accounts:
+        return
+    menu_header()
+    print(f"{CY}  ── REMOVE ACCOUNT ──{R}\n")
+    for i, a in enumerate(accounts, 1):
+        print(f"  {i}. {a['name']}")
+    c = input("\n  Remove #: ").strip()
+    if c.isdigit():
+        idx = int(c) - 1
+        if 0 <= idx < len(accounts):
+            n = accounts[idx]["name"]
+            stop_automation(n)
+            remove_account(n)
+            print(f"\n  {GR}Removed.{R}")
+            time.sleep(1)
+
+
+def run_dashboard():
+    global display_running
+    accounts = load_accounts()
+    if not accounts:
+        print(f"  {YL}No accounts. Add one first.{R}\n")
+        input("  Press Enter…")
+        return
+
+    fetch_thread = threading.Thread(target=prefetch_usernames, args=(accounts,), daemon=True)
+    fetch_thread.start()
+
+    start_automation()
+    if not automation_enabled:
+        print(f"  {RD}No accounts could start. Check Game IDs.{R}\n")
+        input("  Press Enter…")
+        return
+
+    display_running = True
+    dt = threading.Thread(target=display_thread_fn, args=(accounts,), daemon=True)
+    dt.start()
+
+    try:
+        while display_running:
+            time.sleep(0.5)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        display_running = False
+        dt.join(timeout=3)
+        stop_automation()
+
+
+def display_menu():
+    menu_header()
+    print(f"  {CY}1.{R} Manage accounts")
+    print(f"  {CY}2.{R} Start automation  (live dashboard)")
+    print(f"  {CY}3.{R} Stop all")
+    print(f"  {CY}4.{R} Toggle single account")
+    print(f"  {CY}5.{R} Exit")
+    print()
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  MAIN
+# ══════════════════════════════════════════════════════════════════════════════
+def main():
+    global platform_info
+    try:
+        platform_info = PlatformDetector().detect_platform()
+
+        if not load_accounts():
+            add_account("Account1", DEFAULT_PACKAGE)
+
+        while True:
+            display_menu()
+            choice = input(f"  {CY}Choice (1-5): {R}").strip()
+
+            if choice == "1":
+                manage_accounts()
+
+            elif choice == "2":
+                run_dashboard()
+
+            elif choice == "3":
+                stop_automation()
+                print(f"  {GR}All stopped.{R}\n")
+                time.sleep(1)
+
+            elif choice == "4":
+                accounts = load_accounts()
+                if not accounts:
+                    continue
+                menu_header()
+                print(f"{CY}  ── TOGGLE ACCOUNT ──{R}\n")
+                for i, a in enumerate(accounts, 1):
+                    st = f"{GR}Running{R}" if account_running.get(a["name"]) else "Stopped"
+                    print(f"  {i}. {a['name']}  [{st}]")
+                print(f"  {len(accounts)+1}. Back\n")
+                c = input(f"  {CY}Choice: {R}").strip()
+                if c.isdigit():
+                    idx = int(c)
+                    if 1 <= idx <= len(accounts):
+                        n = accounts[idx-1]["name"]
+                        if account_running.get(n):
+                            stop_automation(n)
+                        else:
+                            start_automation(n)
+
+            elif choice == "5":
+                stop_automation()
+                clear()
+                print(f"{CY}Goodbye!{R}\n")
+                break
+
+            time.sleep(0.05)
+    except KeyboardInterrupt:
+        print()
+        stop_automation()
+        clear()
+        print(f"{CY}Bye!{R}\n")
+    except Exception as e:
+        print(f"{RD}Fatal: {e}{R}")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
