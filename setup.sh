@@ -96,7 +96,7 @@ echo "[OK] System tools installed"
 DEST="/sdcard/Download/Rejoiner.py"
 echo "[..] Downloading Rejoiner.py…"
 curl -Ls \
-  "https://raw.githubusercontent.com/vthangsinkyi/setup-termux/refs/heads/main/Rejoiner.py" \
+  "https://raw.githubusercontent.com/Dayvinksthik/Tool/refs/heads/main/Rejoiner.py" \
   -o "$DEST"
 su -c "chmod 644 $DEST"
 echo "[OK] Saved to $DEST"
