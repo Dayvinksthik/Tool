@@ -4,7 +4,8 @@
 #  Run once on a fresh Termux install (rooted Android required)
 # =============================================================
 
-set -e
+# Do NOT use set -e — we handle errors manually so one failure
+# doesn't abort the whole setup.
 
 echo ""
 echo "======================================================"
@@ -23,55 +24,85 @@ echo "[OK] Root access confirmed"
 # ── 2. Memory check ───────────────────────────────────────────
 MEMORY=$(free -m 2>/dev/null | awk '/Mem:/{print $2}' || echo 0)
 if [ "$MEMORY" -gt 0 ] && [ "$MEMORY" -lt 512 ]; then
-  echo "[WARN] Only ${MEMORY}MB RAM detected. Recommend at least 512 MB."
+  echo "[WARN] Only ${MEMORY}MB RAM — recommend at least 512MB"
 fi
 
 # ── 3. Storage setup ──────────────────────────────────────────
 echo "[..] Setting up storage access…"
-[ -L "/data/data/com.termux/files/home/storage" ] && \
-  rm -f /data/data/com.termux/files/home/storage
+[ -L "$HOME/storage" ] && rm -f "$HOME/storage"
 termux-setup-storage
 sleep 2
 echo "[OK] Storage configured"
 
-# ── 4. Mirror ─────────────────────────────────────
-echo "[..] Selecting fastest mirror…"
-if command -v termux-change-repo &>/dev/null; then
-  termux-change-repo --select-mirror Grimler
-else
-  MIRROR_DIR="/data/data/com.termux/files/usr/etc/termux"
-  mkdir -p "$MIRROR_DIR"
-  echo "deb https://packages.termux.dev/apt/termux-main stable main" \
-    > "$MIRROR_DIR/sources.list"
-fi
-echo "[OK] Mirror set"
+# ── 4. Force Cloudflare mirror (fully synced, most reliable) ──
+# The auto-selected mirror often has 404s for newer packages.
+# packages-cf.termux.dev is Cloudflare-backed and always complete.
+echo "[..] Setting Cloudflare mirror…"
+SOURCES_DIR="/data/data/com.termux/files/usr/etc/apt/sources.list.d"
+SOURCES_MAIN="/data/data/com.termux/files/usr/etc/apt/sources.list"
+mkdir -p "$SOURCES_DIR"
+# Write the primary source pointing to Cloudflare CDN
+echo "deb https://packages-cf.termux.dev/apt/termux-main stable main" \
+  > "$SOURCES_MAIN"
+# Remove any conflicting sources that might override it
+rm -f "$SOURCES_DIR"/*.list 2>/dev/null || true
+echo "[OK] Mirror set to packages-cf.termux.dev (Cloudflare CDN)"
 
-# ── 5. Package update ─────────────────────────────────────────
+# ── 5. Update package lists ───────────────────────────────────
 echo "[..] Updating package lists…"
-yes | pkg update -y 2>/dev/null || true
-yes | pkg upgrade -y 2>/dev/null || true
-echo "[OK] Packages updated"
+apt-get update -y 2>&1 | tail -3
+echo "[OK] Package lists updated"
 
-# ── 6. Dependencies ───────────────────────────────────────────
-echo "[..] Installing system packages…"
-yes | pkg install -y python python-pip curl tsu android-tools 2>/dev/null
-echo "[OK] System packages installed"
+# ── 6. Upgrade existing packages ──────────────────────────────
+echo "[..] Upgrading packages (this may take a while)…"
+apt-get upgrade -y --fix-missing 2>&1 | tail -5 || \
+  echo "[WARN] Some packages could not upgrade — continuing anyway"
+echo "[OK] Packages upgraded"
 
-# ── 7. Python dependencies ────────────────────────────────────
-echo "[..] Installing Python packages…"
-pip install --quiet --upgrade pip
-pip install --quiet requests psutil
+# ── 7. Install required system packages ───────────────────────
+echo "[..] Installing python, curl, tsu, android-tools…"
+apt-get install -y --fix-missing python python-pip curl tsu android-tools 2>&1 | tail -5
+
+# Verify Python actually installed
+if ! command -v python &>/dev/null && ! command -v python3 &>/dev/null; then
+  echo "[WARN] Python not found after install — retrying with pip fallback…"
+  apt-get install -y --fix-missing python3 python3-pip 2>&1 | tail -3
+fi
+
+# Final check
+if command -v python &>/dev/null; then
+  PY_VER=$(python --version 2>&1)
+  echo "[OK] $PY_VER installed"
+elif command -v python3 &>/dev/null; then
+  PY_VER=$(python3 --version 2>&1)
+  echo "[OK] $PY_VER installed (as python3)"
+  # Create python symlink if missing
+  ln -sf "$(command -v python3)" \
+    /data/data/com.termux/files/usr/bin/python 2>/dev/null || true
+  echo "[OK] python symlink created"
+else
+  echo "[ERROR] Python could not be installed. Try running setup again."
+  echo "        If this keeps failing, run: pkg install python"
+  exit 1
+fi
+
+# ── 8. Install Python packages ────────────────────────────────
+echo "[..] Installing Python packages (requests, psutil)…"
+pip install --quiet --upgrade pip 2>/dev/null || \
+  pip3 install --quiet --upgrade pip 2>/dev/null || true
+pip install --quiet requests psutil 2>/dev/null || \
+  pip3 install --quiet requests psutil 2>/dev/null || true
 echo "[OK] Python packages installed"
 
-# ── 8. Download Rejoiner.py to /sdcard/Download ───────────────
+# ── 9. Download Rejoiner.py ───────────────────────────────────
 DEST="/sdcard/Download/Rejoiner.py"
 echo "[..] Downloading Rejoiner.py…"
-curl -Ls "https://raw.githubusercontent.com/Dayvinksthik/Tool/refs/heads/main/Rejoiner.py" \
+curl -Ls "https://raw.githubusercontent.com/vthangsinkyi/setup-termux/refs/heads/main/Rejoiner.py" \
   -o "$DEST"
 su -c "chmod 644 $DEST"
-echo "[OK] Rejoiner.py saved to $DEST"
+echo "[OK] Rejoiner.py → $DEST"
 
-# ── 9. Global launcher ────────────────────────────────────────
+# ── 10. Global launcher ───────────────────────────────────────
 LAUNCHER="/data/data/com.termux/files/usr/bin/rejoiner"
 cat > "$LAUNCHER" <<'EOF'
 #!/bin/bash
@@ -79,22 +110,23 @@ cd /sdcard/Download
 python Rejoiner.py "$@"
 EOF
 chmod +x "$LAUNCHER"
-echo "[OK] Launcher created: type 'rejoiner' to start"
+echo "[OK] 'rejoiner' shortcut created"
 
-# ── 10. Roblox check ──────────────────────────────────────────
-if ! su -c "pm list packages com.roblox.client" 2>/dev/null | grep -q "com.roblox.client"; then
+# ── 11. Roblox check ──────────────────────────────────────────
+if ! su -c "pm list packages com.roblox.client" 2>/dev/null \
+    | grep -q "com.roblox.client"; then
   echo ""
-  echo "[WARN] Roblox (com.roblox.client) not found on this device."
-  echo "       Install Roblox before running the tool."
+  echo "[WARN] Roblox not found. Install it from the Play Store first."
 fi
 
 echo ""
 echo "======================================================"
 echo "  Setup complete!"
 echo ""
-echo "  To launch the tool:"
+echo "  Run the tool:"
+echo "    cd /sdcard/Download && python Rejoiner.py"
+echo ""
+echo "  Or use the shortcut:"
 echo "    rejoiner"
-echo "  Or directly:"
-echo "    python /sdcard/Download/Rejoiner.py"
 echo "======================================================"
 echo ""
