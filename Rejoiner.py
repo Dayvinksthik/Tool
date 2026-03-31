@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Roblox Auto Rejoin Tool
+Roblox Auto Rejoin Tool — KOALA
 Multi-account headless watchdog for rooted Android / Termux.
 """
 
@@ -201,33 +201,136 @@ def get_current_focus():
     return run_cmd("dumpsys window | grep mCurrentFocus")
 
 
+GAME_ACTIVITIES = [
+    "UnityPlayerActivity",
+    "GameActivity",
+    "NativeActivity",
+    "ActivityNativeMain",
+]
+
+MENU_ACTIVITIES = [
+    "ActivitySplash", "SplashActivity",
+    "ActivityLogin",  "LoginActivity",
+    "LaunchActivity", "MainActivity",
+    "ActivitySocialSlot",
+]
+
+def _dumpsys_activity(timeout=20):
+    """Single authoritative call; cached per check cycle to avoid
+    running dumpsys 3 times for one account."""
+    return run_cmd("dumpsys activity", timeout=timeout) or ""
+
+
 def is_in_game(package):
+    """Return True when a Roblox game session is active.
+
+    Detection priority:
+      1. mResumedActivity / mFocusedActivity   (most authoritative)
+      2. mCurrentFocus window                  (fast, but focus-dependent)
+      3. Full activity task stack              (works in split-screen / bg)
+      4. Safe default: if the process is alive but state is unknown,
+         assume IN-GAME to prevent unnecessary rejoins.
+    """
+    if not is_roblox_running(package):
+        return False
+
+    dump = _dumpsys_activity()
+
+    # ── 1. Check mResumedActivity & mFocusedActivity ──────────
+    for keyword in ("mResumedActivity", "mFocusedActivity", "mLastPausedActivity"):
+        for line in dump.splitlines():
+            if keyword in line and package in line:
+                if any(a in line for a in GAME_ACTIVITIES):
+                    return True
+                if any(a in line for a in MENU_ACTIVITIES):
+                    return False
+
+    # ── 2. mCurrentFocus ─
     focus = get_current_focus()
-    return bool(focus) and package in focus and (
-        "UnityPlayerActivity" in focus or "GameActivity" in focus
-    )
+    if focus and package in focus:
+        if any(a in focus for a in GAME_ACTIVITIES):
+            return True
+        if any(a in focus for a in MENU_ACTIVITIES):
+            return False
+
+    # ── 3. Full activity task stack ───────────────────────────
+    in_pkg_task = False
+    for line in dump.splitlines():
+        if package in line:
+            in_pkg_task = True
+        if in_pkg_task:
+            if any(a in line for a in GAME_ACTIVITIES):
+                return True
+            if any(a in line for a in MENU_ACTIVITIES):
+                return False
+        if in_pkg_task and ("* Task{" in line or "* TaskRecord" in line) and package not in line:
+            in_pkg_task = False
+
+    # ── 4. Safe default ───────────────────────────────────────
+    return True
+
+
+def _get_pid(package):
+    """Return the numeric PID of the package, or None."""
+    out = run_cmd(f"pidof {package}") or run_cmd(f"ps -A | grep {package}")
+    if out:
+        for token in out.split():
+            if token.isdigit():
+                return token
+    return None
+
+
+def _read_cpu_jiffies(pid):
+    """Read total CPU jiffies for a PID from /proc/<pid>/stat."""
+    try:
+        with open(f"/proc/{pid}/stat") as f:
+            fields = f.read().split()
+        return int(fields[13]) + int(fields[14])
+    except Exception:
+        return None
 
 
 def is_frozen(package, threshold):
+    """Detect a frozen Roblox process by watching CPU jiffies.
+
+    Unlike watching mCurrentFocus (which always shows Termux when the
+    terminal is open), CPU jiffies change whenever the process does
+    real work — regardless of which window is on screen.
+    A truly frozen process will have the same jiffy count for
+    `threshold` consecutive checks.
+    """
     if not is_roblox_running(package):
         with lock:
             account_focus_count[package] = 0
             account_last_focus[package]  = None
         return False
-    focus = get_current_focus()
+
+    pid = _get_pid(package)
+    jiffies = _read_cpu_jiffies(pid) if pid else None
+
     with lock:
-        prev  = account_last_focus.get(package)
-        count = account_focus_count.get(package, 0)
-        if not focus or focus == prev:
+        prev_jiffies = account_last_focus.get(package)
+        count        = account_focus_count.get(package, 0)
+
+        if jiffies is None:
+            focus = get_current_focus()
+            if focus and package in focus:
+                if focus == prev_jiffies:
+                    count += 1
+                else:
+                    count = 0
+            account_last_focus[package]  = focus
+            account_focus_count[package] = count
+            return count >= threshold
+
+        if prev_jiffies is not None and jiffies == prev_jiffies:
             count += 1
         else:
             count = 0
-            prev  = focus
-        account_last_focus[package]  = prev
+
+        account_last_focus[package]  = jiffies
         account_focus_count[package] = count
-        if count >= threshold and package in (focus or prev or ""):
-            return True
-    return False
+        return count >= threshold
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -303,7 +406,7 @@ def send_webhook(url, message, name=None):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  AUTOMATION LOOP
+#  AUTOMATION LOOP (per account)
 # ══════════════════════════════════════════════════════════════════════════════
 def set_status(name, status):
     with lock:
@@ -453,6 +556,7 @@ def draw_dashboard(cfg_list):
     out.append("")
     out.append(f"{DIM}Ctrl+C → menu{R}")
 
+    # ── ATOMIC PRINT ───────────────────────────────────────────────────
     os.system("clear")
     print("\n".join(out))
 
