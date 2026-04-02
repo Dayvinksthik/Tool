@@ -1,7 +1,6 @@
 #!/bin/bash
 # =============================================================
 #  Roblox Auto Rejoin — Termux Setup Script
-#  Installs everything needed to run Rejoiner.py
 # =============================================================
 
 echo ""
@@ -25,113 +24,124 @@ termux-setup-storage
 sleep 2
 echo "[OK] Storage ready"
 
-# ── 3. Force Cloudflare mirror (always fully synced) ──────────
+# ── 3. Force Cloudflare mirror ────────────────────────────────
 echo "[..] Setting mirror to Cloudflare CDN…"
 SOURCES="/data/data/com.termux/files/usr/etc/apt/sources.list"
 SOURCES_D="/data/data/com.termux/files/usr/etc/apt/sources.list.d"
 mkdir -p "$SOURCES_D"
-echo "deb https://packages-cf.termux.dev/apt/termux-main stable main" \
-  > "$SOURCES"
+echo "deb https://packages-cf.termux.dev/apt/termux-main stable main" > "$SOURCES"
 rm -f "$SOURCES_D"/*.list 2>/dev/null || true
-echo "[OK] Mirror: packages-cf.termux.dev"
+echo "[OK] Mirror set"
 
-# ── 4. Update package index ───────────────────────────────────
-echo "[..] Updating package lists…"
-apt-get update -y 2>&1 | grep -E "^(Err|Get|Hit|Reading|Done)" || true
-echo "[OK] Package lists updated"
+# ── 4. FULL SYSTEM UPDATE ──────────────
+echo "[..] Updating system (fix broken packages)…"
+pkg update -y && pkg upgrade -y
+echo "[OK] System fully updated"
 
 # ── 5. Install Python ─────────────────────────────────────────
 echo "[..] Installing Python…"
-apt-get install -y --fix-missing python python-pip 2>&1 | tail -3
+pkg install -y python python-pip
 
 if ! command -v python &>/dev/null; then
-  echo "[..] Trying python3…"
-  apt-get install -y --fix-missing python3 python3-pip 2>&1 | tail -3
-  if command -v python3 &>/dev/null; then
-    ln -sf "$(command -v python3)" \
-      /data/data/com.termux/files/usr/bin/python 2>/dev/null || true
+  pkg install -y python3 python3-pip
+  ln -sf "$(command -v python3)" $PREFIX/bin/python 2>/dev/null || true
+fi
+
+if ! command -v python &>/dev/null; then
+  echo "[ERROR] Python install failed"
+  exit 1
+fi
+echo "[OK] $(python --version)"
+
+# ── 6. pip + requests ─────────────────────────────────────────
+echo "[..] Installing pip + requests…"
+python -m ensurepip --upgrade 2>/dev/null || true
+python -m pip install --upgrade pip >/dev/null 2>&1
+
+python -m pip install requests >/dev/null 2>&1 || \
+pkg install -y python-requests
+
+python -c "import requests" 2>/dev/null || {
+  echo "[ERROR] requests install failed"
+  exit 1
+}
+echo "[OK] requests ready"
+
+# ── 7. Install system tools ───────────────────────────────────
+echo "[..] Installing system tools…"
+pkg install -y curl tsu android-tools
+echo "[OK] Tools installed"
+
+echo "[..] Checking curl health..."
+
+if ! curl --version >/dev/null 2>&1; then
+  echo "[WARN] curl broken — repairing..."
+
+  pkg reinstall -y curl openssl >/dev/null 2>&1 || true
+
+  if ! curl --version >/dev/null 2>&1; then
+    echo "[WARN] forcing clean reinstall..."
+    pkg uninstall -y curl openssl >/dev/null 2>&1 || true
+    pkg install -y curl openssl >/dev/null 2>&1 || true
   fi
 fi
 
-if ! command -v python &>/dev/null; then
-  echo "[ERROR] Python could not be installed."
-  echo "        Run manually: pkg install python"
-  exit 1
-fi
-echo "[OK] $(python --version 2>&1)"
-
-# ── 6. Install pip ────────────────────
-echo "[..] Ensuring pip is available…"
-python -m ensurepip --upgrade 2>/dev/null || true
-python -m pip install --quiet --upgrade pip 2>/dev/null || true
-
-echo "[..] Installing requests…"
-
-python -m pip install --quiet requests && REQUESTS_OK=1 || REQUESTS_OK=0
-
-if [ "$REQUESTS_OK" -eq 0 ]; then
-  echo "[..] pip failed — trying apt fallback…"
-  apt-get install -y python-requests 2>/dev/null && REQUESTS_OK=1 || true
-fi
-
-if [ "$REQUESTS_OK" -eq 0 ]; then
-  echo "[..] Trying pip directly…"
-  pip install requests && REQUESTS_OK=1 || true
-fi
-
-if python -c "import requests" 2>/dev/null; then
-  echo "[OK] requests installed and importable"
-else
-  echo "[ERROR] requests could not be installed."
-  echo "        Run manually: python -m pip install requests"
+if ! curl --version >/dev/null 2>&1; then
+  echo "[FATAL] curl still broken"
+  echo "Run: rm -rf \$PREFIX then reopen Termux"
   exit 1
 fi
 
-# ── 8. Install other useful tools ─────────────────────────────
-echo "[..] Installing curl, tsu, android-tools…"
-apt-get install -y --fix-missing curl tsu android-tools 2>&1 | tail -3
-echo "[OK] System tools installed"
+echo "[OK] curl working"
 
-# ── 9. Download Rejoiner.py ───────────────────────────────────
+# ── 9. Download Rejoiner.py ─────────────
 DEST="/sdcard/Download/Rejoiner.py"
+URL="https://raw.githubusercontent.com/Dayvinksthik/Tool/refs/heads/main/Rejoiner.py"
+
 echo "[..] Downloading Rejoiner.py…"
-curl -Ls \
-  "https://raw.githubusercontent.com/Dayvinksthik/Tool/refs/heads/main/Rejoiner.py" \
-  -o "$DEST"
+
+curl -fL --retry 3 --retry-delay 2 "$URL" -o "$DEST" || {
+  echo "[WARN] curl failed — trying wget..."
+  pkg install -y wget >/dev/null 2>&1
+  wget -O "$DEST" "$URL" || {
+    echo "[ERROR] Download failed"
+    exit 1
+  }
+}
+
 su -c "chmod 644 $DEST"
 echo "[OK] Saved to $DEST"
 
-# ── 10. Quick import test ─────────────────────────────────────
-echo "[..] Verifying Rejoiner.py can start…"
-python -c "
-import os, sys, time, json, shutil, threading, subprocess, requests
-from datetime import datetime
-print('[OK] All imports OK')
-"
+# ── 10. Import test ───────────────────────────────────────────
+echo "[..] Testing Python imports…"
+python - <<EOF
+import requests, os, sys, time, subprocess
+print("[OK] All imports OK")
+EOF
 
-# ── 11. Global launcher ───────────────────────────────────────
-LAUNCHER="/data/data/com.termux/files/usr/bin/rejoiner"
+# ── 11. Create launcher ───────────────────────────────────────
+LAUNCHER="$PREFIX/bin/rejoiner"
+
 cat > "$LAUNCHER" <<'EOF'
 #!/bin/bash
 cd /sdcard/Download
 python Rejoiner.py "$@"
 EOF
-chmod +x "$LAUNCHER"
-echo "[OK] Shortcut 'rejoiner' created"
 
-# ── 12. Roblox installed ─────────────────────────────────────
-if ! su -c "pm list packages com.roblox.client" 2>/dev/null \
-    | grep -q "com.roblox.client"; then
-  echo "[WARN] Roblox not found — install from Play Store before running"
+chmod +x "$LAUNCHER"
+echo "[OK] Command 'rejoiner' created"
+
+# ── 12. Check Roblox ──────────────────────────────────────────
+if ! su -c "pm list packages com.roblox.client" | grep -q "com.roblox.client"; then
+  echo "[WARN] Roblox not installed"
 fi
 
 echo ""
 echo "======================================================"
-echo "  Setup complete! Run your tool:"
+echo "  ✅ Setup COMPLETE"
 echo ""
-echo "    cd /sdcard/Download && python Rejoiner.py"
-echo ""
-echo "  Or use the shortcut:"
+echo "  Run:"
 echo "    rejoiner"
+echo ""
 echo "======================================================"
 echo ""
