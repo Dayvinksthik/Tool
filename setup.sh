@@ -9,6 +9,11 @@ echo "  Roblox Auto Rejoin — UGPhone / Redfinger Setup"
 echo "======================================================"
 echo ""
 
+if [ -z "${TERMUX_VERSION:-}" ] && ! command -v termux-info >/dev/null 2>&1; then
+  echo "[ERROR] This script must be run inside Termux."
+  exit 1
+fi
+
 # ── 1. Root check ─────────────────────────────────────────────
 if ! su -c "echo test" 2>/dev/null | grep -q "test"; then
   echo "[ERROR] Root access required. Grant Termux superuser in Magisk."
