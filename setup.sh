@@ -27,7 +27,8 @@ echo "[..] Updating Termux…"
 pkg update -y && pkg upgrade -y
 
 echo "[..] Installing required packages…"
-pkg install -y python python-pip curl tsu android-tools
+pkg install -y python
+pkg install -y python-pip curl tsu android-tools
 
 # Fix curl if broken
 if ! curl --version >/dev/null 2>&1; then
