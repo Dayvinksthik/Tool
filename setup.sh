@@ -24,7 +24,9 @@ echo "[OK] Storage ready"
 
 # ── 3. Update & install essentials ────────────────────────────
 echo "[..] Updating Termux…"
-pkg update -y && pkg upgrade -y
+export DEBIAN_FRONTEND=noninteractive
+pkg update -y
+pkg upgrade -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold
 
 echo "[..] Installing required packages…"
 pkg install -y python
