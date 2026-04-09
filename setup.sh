@@ -42,9 +42,9 @@ echo "[OK] Packages installed"
 # ── 4. Python dependencies ────────────────────────────────────
 echo "[..] Installing Python packages…"
 python -m pip install --upgrade pip
-python -m pip install requests
+python -m pip install requests pyprotectorx
 
-echo "[OK] requests installed"
+echo "[OK] Python packages installed"
 
 # ── 5. Download the fixed Rejoiner.py ─────────────────────────
 DEST="/sdcard/Download/Rejoiner.py"
