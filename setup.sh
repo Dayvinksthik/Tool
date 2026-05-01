@@ -1,88 +1,120 @@
-#!/bin/bash
-# =============================================================
-#  Roblox Auto Rejoin
-# =============================================================
-
 echo ""
 echo "======================================================"
-echo "  Roblox Auto Rejoin — UGPhone / Redfinger Setup"
+echo "  Roblox Auto Rejoin — Termux Setup"
 echo "======================================================"
 echo ""
 
-if [ -z "${TERMUX_VERSION:-}" ] && ! command -v termux-info >/dev/null 2>&1; then
-  echo "[ERROR] This script must be run inside Termux."
-  exit 1
-fi
-
-# ── 1. Root check ─────────────────────────────────────────────
 if ! su -c "echo test" 2>/dev/null | grep -q "test"; then
-  echo "[ERROR] Root access required. Grant Termux superuser in Magisk."
+  echo "[ERROR] Root access required."
+  echo "        Grant Termux superuser in Magisk, then retry."
   exit 1
 fi
 echo "[OK] Root access confirmed"
 
-# ── 2. Storage ────────────────────────────────────────────────
 echo "[..] Setting up storage…"
+[ -L "$HOME/storage" ] && rm -f "$HOME/storage"
 termux-setup-storage
 sleep 2
 echo "[OK] Storage ready"
 
-# ── 3. Update & install essentials ────────────────────────────
-echo "[..] Updating Termux…"
-export DEBIAN_FRONTEND=noninteractive
-pkg update -y
-pkg upgrade -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold
+echo "[..] Setting mirror to Cloudflare CDN…"
+SOURCES="/data/data/com.termux/files/usr/etc/apt/sources.list"
+SOURCES_D="/data/data/com.termux/files/usr/etc/apt/sources.list.d"
+mkdir -p "$SOURCES_D"
+echo "deb https://packages-cf.termux.dev/apt/termux-main stable main" \
+  > "$SOURCES"
+rm -f "$SOURCES_D"/*.list 2>/dev/null || true
+echo "[OK] Mirror: packages-cf.termux.dev"
 
-echo "[..] Installing required packages…"
-pkg install -y python
-pkg install -y python-pip curl tsu android-tools
+echo "[..] Updating package lists…"
+apt-get update -y 2>&1 | grep -E "^(Err|Get|Hit|Reading|Done)" || true
+echo "[OK] Package lists updated"
 
-# Fix curl if broken
-if ! curl --version >/dev/null 2>&1; then
-  pkg reinstall -y curl openssl >/dev/null 2>&1
+echo "[..] Installing Python…"
+apt-get install -y --fix-missing python python-pip 2>&1 | tail -3
+
+if ! command -v python &>/dev/null; then
+  echo "[..] Trying python3…"
+  apt-get install -y --fix-missing python3 python3-pip 2>&1 | tail -3
+  if command -v python3 &>/dev/null; then
+    ln -sf "$(command -v python3)" \
+      /data/data/com.termux/files/usr/bin/python 2>/dev/null || true
+  fi
 fi
 
-echo "[OK] Packages installed"
-
-# ── 4. Python dependencies ────────────────────────────────────
-echo "[..] Installing Python packages…"
-python -m pip install --upgrade pip
-python -m pip install requests pyprotectorx
-
-echo "[OK] Python packages installed"
-
-# ── 5. Download the fixed Rejoiner.py ─────────────────────────
-DEST="/sdcard/Download/Rejoiner.py"
-URL="https://raw.githubusercontent.com/Dayvinksthik/Tool/refs/heads/main/Rejoiner.py"
-
-echo "[..] Downloading Rejoiner.py (Cloud-optimized version)…"
-curl -fL --retry 3 --retry-delay 2 "$URL" -o "$DEST" || {
-  echo "[ERROR] Download failed. Check your internet."
+if ! command -v python &>/dev/null; then
+  echo "[ERROR] Python could not be installed."
+  echo "        Run manually: pkg install python"
   exit 1
-}
+fi
+echo "[OK] $(python --version 2>&1)"
 
+echo "[..] Ensuring pip is available…"
+python -m ensurepip --upgrade 2>/dev/null || true
+python -m pip install --quiet --upgrade pip 2>/dev/null || true
+
+echo "[..] Installing requests…"
+
+python -m pip install --quiet requests && REQUESTS_OK=1 || REQUESTS_OK=0
+
+if [ "$REQUESTS_OK" -eq 0 ]; then
+  echo "[..] pip failed — trying apt fallback…"
+  apt-get install -y python-requests 2>/dev/null && REQUESTS_OK=1 || true
+fi
+
+if [ "$REQUESTS_OK" -eq 0 ]; then
+  echo "[..] Trying pip directly…"
+  pip install requests && REQUESTS_OK=1 || true
+fi
+
+if python -c "import requests" 2>/dev/null; then
+  echo "[OK] requests installed and importable"
+else
+  echo "[ERROR] requests could not be installed."
+  echo "        Run manually: python -m pip install requests"
+  exit 1
+fi
+
+echo "[..] Installing curl, tsu, android-tools…"
+apt-get install -y --fix-missing curl tsu android-tools 2>&1 | tail -3
+echo "[OK] System tools installed"
+
+DEST="/sdcard/Download/Rejoiner.py"
+echo "[..] Downloading Rejoiner.py…"
+curl -Ls \
+  "https://raw.githubusercontent.com/vthangsinkyi/setup-termux/refs/heads/main/Rejoiner.py" \
+  -o "$DEST"
 su -c "chmod 644 $DEST"
-echo "[OK] Rejoiner.py saved to /sdcard/Download/"
+echo "[OK] Saved to $DEST"
 
-# ── 6. Create easy launcher ───────────────────────────────────
-LAUNCHER="$PREFIX/bin/rejoiner"
+echo "[..] Verifying Rejoiner.py can start…"
+python -c "
+import os, sys, time, json, shutil, threading, subprocess, requests
+from datetime import datetime
+print('[OK] All imports OK')
+"
 
+LAUNCHER="/data/data/com.termux/files/usr/bin/rejoiner"
 cat > "$LAUNCHER" <<'EOF'
 #!/bin/bash
-echo "Starting KOALA Roblox Auto Rejoin (Cloud Mode)..."
 cd /sdcard/Download
-termux-wake-lock
-python -u Rejoiner.py "$@"
+python Rejoiner.py "$@"
 EOF
-
 chmod +x "$LAUNCHER"
-echo "[OK] Launcher created. You can now type: rejoiner"
+echo "[OK] Shortcut 'rejoiner' created"
 
-# ── 7. Final message ──────────────────────────────────────────
+if ! su -c "pm list packages com.roblox.client" 2>/dev/null \
+    | grep -q "com.roblox.client"; then
+  echo "[WARN] Roblox not found — install from Play Store before running"
+fi
+
 echo ""
 echo "======================================================"
-echo "  ✅ SETUP COMPLETE!"
+echo "  Setup complete! Run your tool:"
 echo ""
-echo "  After running 'rejoiner', choose option 2 to start automation."
+echo "    cd /sdcard/Download && python Rejoiner.py"
+echo ""
+echo "  Or use the shortcut:"
+echo "    rejoiner"
 echo "======================================================"
 echo ""
