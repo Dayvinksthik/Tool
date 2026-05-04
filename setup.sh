@@ -1,9 +1,3 @@
-echo ""
-echo "======================================================"
-echo "  Roblox Auto Rejoin — Termux Setup"
-echo "======================================================"
-echo ""
-
 if ! su -c "echo test" 2>/dev/null | grep -q "test"; then
   echo "[ERROR] Root access required."
   echo "        Grant Termux superuser in Magisk, then retry."
@@ -75,17 +69,9 @@ else
   exit 1
 fi
 
-echo "[..] Installing curl, tsu, android-tools…"
-apt-get install -y --fix-missing curl tsu android-tools 2>&1 | tail -3
+echo "[..] Installing tsu, android-tools…"
+apt-get install -y --fix-missing tsu android-tools 2>&1 | tail -3
 echo "[OK] System tools installed"
-
-DEST="/sdcard/Download/Rejoiner.py"
-echo "[..] Downloading Rejoiner.py…"
-curl -Ls \
-  "https://raw.githubusercontent.com/Dayvinksthik/Tool/refs/heads/main/Rejoiner.py" \
-  -o "$DEST"
-su -c "chmod 644 $DEST"
-echo "[OK] Saved to $DEST"
 
 echo "[..] Verifying Rejoiner.py can start…"
 python -c "
@@ -105,16 +91,5 @@ echo "[OK] Shortcut 'rejoiner' created"
 
 if ! su -c "pm list packages com.roblox.client" 2>/dev/null \
     | grep -q "com.roblox.client"; then
-  echo "[WARN] Roblox not found — install from Play Store before running"
+  echo "[WARN] Roblox not found — install Roblox before running"
 fi
-
-echo ""
-echo "======================================================"
-echo "  Setup complete! Run your tool:"
-echo ""
-echo "    cd /sdcard/Download && python Rejoiner.py"
-echo ""
-echo "  Or use the shortcut:"
-echo "    rejoiner"
-echo "======================================================"
-echo ""
