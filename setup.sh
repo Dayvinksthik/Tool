@@ -69,9 +69,17 @@ else
   exit 1
 fi
 
-echo "[..] Installing tsu, android-tools…"
-apt-get install -y --fix-missing tsu android-tools 2>&1 | tail -3
+echo "[..] Installing curl, tsu, android-tools…"
+apt-get install -y --fix-missing curl tsu android-tools 2>&1 | tail -3
 echo "[OK] System tools installed"
+
+DEST="/sdcard/Download/Rejoiner.py"
+echo "[..] Downloading Rejoiner.py…"
+curl -Ls \
+  "https://raw.githubusercontent.com/Dayvinksthik/Tool/refs/heads/main/Rejoiner.py" \
+  -o "$DEST"
+su -c "chmod 644 $DEST"
+echo "[OK] Saved to $DEST"
 
 echo "[..] Verifying Rejoiner.py can start…"
 python -c "
@@ -91,5 +99,5 @@ echo "[OK] Shortcut 'rejoiner' created"
 
 if ! su -c "pm list packages com.roblox.client" 2>/dev/null \
     | grep -q "com.roblox.client"; then
-  echo "[WARN] Roblox not found — install Roblox before running"
+  echo "[WARN] Roblox not found — install from Play Store before running"
 fi
