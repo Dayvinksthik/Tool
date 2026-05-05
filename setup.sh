@@ -69,6 +69,21 @@ else
   exit 1
 fi
 
+echo "[..] Installing Pillow (screenshot detection)…"
+python -m pip install --quiet Pillow 2>/dev/null && PILLOW_OK=1 || PILLOW_OK=0
+
+if [ "$PILLOW_OK" -eq 0 ]; then
+  echo "[..] Trying apt for libjpeg & zlib…"
+  apt-get install -y libjpeg-turbo zlib 2>/dev/null || true
+  python -m pip install --quiet Pillow 2>/dev/null && PILLOW_OK=1 || true
+fi
+
+if python -c "import PIL" 2>/dev/null; then
+  echo "[OK] Pillow installed (screenshot detection active)"
+else
+  echo "[WARN] Pillow not available — screenshot detection disabled"
+fi
+
 echo "[..] Installing curl, tsu, android-tools…"
 apt-get install -y --fix-missing curl tsu android-tools 2>&1 | tail -3
 echo "[OK] System tools installed"
