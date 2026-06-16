@@ -1,3 +1,9 @@
+#!/bin/bash
+
+# =====================================================
+# KOALA Setup Script for UGPhone / Termux (Root)
+# =====================================================
+
 if ! su -c "echo test" 2>/dev/null | grep -q "test"; then
   echo "[ERROR] Root access required."
   echo "        Grant Termux superuser in Magisk, then retry."
@@ -24,12 +30,12 @@ echo "[..] Updating package lists…"
 apt-get update -y 2>&1 | grep -E "^(Err|Get|Hit|Reading|Done)" || true
 echo "[OK] Package lists updated"
 
-echo "[..] Installing Python…"
-apt-get install -y --fix-missing python python-pip 2>&1 | tail -3
+echo "[..] Installing Python, pip, and sqlite3…"
+apt-get install -y --fix-missing python python-pip sqlite3 2>&1 | tail -3
 
 if ! command -v python &>/dev/null; then
   echo "[..] Trying python3…"
-  apt-get install -y --fix-missing python3 python3-pip 2>&1 | tail -3
+  apt-get install -y --fix-missing python3 python3-pip sqlite3 2>&1 | tail -3
   if command -v python3 &>/dev/null; then
     ln -sf "$(command -v python3)" \
       /data/data/com.termux/files/usr/bin/python 2>/dev/null || true
@@ -48,19 +54,15 @@ python -m ensurepip --upgrade 2>/dev/null || true
 python -m pip install --quiet --upgrade pip 2>/dev/null || true
 
 echo "[..] Installing requests…"
-
 python -m pip install --quiet requests && REQUESTS_OK=1 || REQUESTS_OK=0
-
 if [ "$REQUESTS_OK" -eq 0 ]; then
   echo "[..] pip failed — trying apt fallback…"
   apt-get install -y python-requests 2>/dev/null && REQUESTS_OK=1 || true
 fi
-
 if [ "$REQUESTS_OK" -eq 0 ]; then
   echo "[..] Trying pip directly…"
   pip install requests && REQUESTS_OK=1 || true
 fi
-
 if python -c "import requests" 2>/dev/null; then
   echo "[OK] requests installed and importable"
 else
@@ -71,13 +73,11 @@ fi
 
 echo "[..] Installing Pillow (screenshot detection)…"
 python -m pip install --quiet Pillow 2>/dev/null && PILLOW_OK=1 || PILLOW_OK=0
-
 if [ "$PILLOW_OK" -eq 0 ]; then
   echo "[..] Trying apt for libjpeg & zlib…"
   apt-get install -y libjpeg-turbo zlib 2>/dev/null || true
   python -m pip install --quiet Pillow 2>/dev/null && PILLOW_OK=1 || true
 fi
-
 if python -c "import PIL" 2>/dev/null; then
   echo "[OK] Pillow installed (screenshot detection active)"
 else
@@ -89,7 +89,7 @@ apt-get install -y --fix-missing curl tsu android-tools 2>&1 | tail -3
 echo "[OK] System tools installed"
 
 DEST="/sdcard/Download/Rejoiner.py"
-echo "[..] Downloading Rejoiner.py…"
+echo "[..] Downloading Rejoiner.py (updated)…"
 curl -Ls \
   "https://raw.githubusercontent.com/Dayvinksthik/Tool/refs/heads/main/Rejoiner.py" \
   -o "$DEST"
@@ -98,7 +98,7 @@ echo "[OK] Saved to $DEST"
 
 echo "[..] Verifying Rejoiner.py can start…"
 python -c "
-import os, sys, time, json, shutil, threading, subprocess, requests
+import os, sys, time, json, shutil, threading, subprocess, requests, sqlite3
 from datetime import datetime
 print('[OK] All imports OK')
 "
@@ -112,7 +112,12 @@ EOF
 chmod +x "$LAUNCHER"
 echo "[OK] Shortcut 'rejoiner' created"
 
-if ! su -c "pm list packages com.roblox.client" 2>/dev/null \
-    | grep -q "com.roblox.client"; then
-  echo "[WARN] Roblox not found — install from Play Store before running"
+echo "[..] Checking Roblox packages…"
+if su -c "pm list packages com.roblox" 2>/dev/null | grep -q "com.roblox"; then
+  echo "[OK] Roblox packages found"
+else
+  echo "[WARN] No Roblox packages found – install clones first"
 fi
+
+echo ""
+echo "✅ Setup complete. Run: rejoiner"
