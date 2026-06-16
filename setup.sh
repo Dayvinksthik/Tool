@@ -28,7 +28,24 @@ echo "[OK] Mirror: packages-cf.termux.dev"
 
 echo "[..] Updating package lists…"
 apt-get update -y 2>&1 | grep -E "^(Err|Get|Hit|Reading|Done)" || true
-echo "[OK] Package lists updated"
+
+# ===== Fix: Full system upgrade to resolve library mismatches =====
+echo "[..] Performing full system upgrade (fixes OpenSSL/curl issues)…"
+apt-get full-upgrade -y 2>&1 | tail -10
+echo "[OK] System upgraded"
+
+# Reinstall curl and related libraries if they are broken
+echo "[..] Checking for curl library issues…"
+if ! curl --version &>/dev/null; then
+  echo "[WARN] curl is broken – reinstalling..."
+  apt-get install --reinstall curl libcurl libngtcp2 openssl ca-certificates -y
+fi
+# Verify curl works
+if curl --version &>/dev/null; then
+  echo "[OK] curl is working"
+else
+  echo "[WARN] curl still broken – will use wget as fallback"
+fi
 
 echo "[..] Installing Python, pip, and sqlite3…"
 apt-get install -y --fix-missing python python-pip sqlite3 2>&1 | tail -3
@@ -89,12 +106,33 @@ apt-get install -y --fix-missing curl tsu android-tools 2>&1 | tail -3
 echo "[OK] System tools installed"
 
 DEST="/sdcard/Download/Rejoiner.py"
-echo "[..] Downloading Rejoiner.py (updated)…"
-curl -Ls \
-  "https://raw.githubusercontent.com/Dayvinksthik/Tool/refs/heads/main/Rejoiner.py" \
-  -o "$DEST"
-su -c "chmod 644 $DEST"
-echo "[OK] Saved to $DEST"
+echo "[..] Downloading Rejoiner.py…"
+
+# Try curl, if fails use wget
+if curl --version &>/dev/null; then
+  curl -Ls \
+    "https://raw.githubusercontent.com/Dayvinksthik/Tool/refs/heads/main/Rejoiner.py" \
+    -o "$DEST"
+  CURL_EXIT=$?
+  if [ $CURL_EXIT -ne 0 ] || [ ! -s "$DEST" ]; then
+    echo "[WARN] curl download failed, trying wget..."
+    wget -q -O "$DEST" \
+      "https://raw.githubusercontent.com/Dayvinksthik/Tool/refs/heads/main/Rejoiner.py"
+  fi
+else
+  echo "[..] curl not available, using wget..."
+  wget -q -O "$DEST" \
+    "https://raw.githubusercontent.com/Dayvinksthik/Tool/refs/heads/main/Rejoiner.py"
+fi
+
+# Verify download
+if [ -s "$DEST" ]; then
+  su -c "chmod 644 $DEST"
+  echo "[OK] Saved to $DEST"
+else
+  echo "[ERROR] Failed to download Rejoiner.py. Please download manually."
+  exit 1
+fi
 
 echo "[..] Verifying Rejoiner.py can start…"
 python -c "
