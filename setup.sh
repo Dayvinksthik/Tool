@@ -1,158 +1,33 @@
-#!/bin/bash
+echo "Updating and upgrading Termux..."
+pkg update -y && pkg upgrade -y
 
-# =====================================================
-# KOALA Setup Script for UGPhone / Termux (Root)
-# =====================================================
+echo "Changing repositories..."
+termux-change-repo
 
-echo "[..] Checking and fixing curl if needed..."
-if ! curl --version &>/dev/null 2>&1; then
-  echo "[WARN] curl is broken – running apt upgrade to fix..."
-  apt update -y 2>/dev/null
-  apt full-upgrade -y 2>/dev/null
-  apt install --reinstall curl libcurl libngtcp2 openssl -y 2>/dev/null
-  if curl --version &>/dev/null 2>&1; then
-    echo "[OK] curl fixed."
-  else
-    echo "[WARN] curl still broken – will use wget instead."
-  fi
-else
-  echo "[OK] curl is working."
+echo "Installing Python and pip..."
+pkg install python python-pip -y
+
+if ! command -v python &> /dev/null
+then
+    echo "Error: Python is not installed. Retrying..."
+    pkg install python -y
 fi
 
-if ! su -c "echo test" 2>/dev/null | grep -q "test"; then
-  echo "[ERROR] Root access required."
-  echo "        Grant Termux superuser in Magisk, then retry."
-  exit 1
-fi
-echo "[OK] Root access confirmed"
+echo "Installing other necessary packages..."
+pkg install which tsu proot termux-tools git openssh procps tor -y
 
-echo "[..] Setting up storage…"
-[ -L "$HOME/storage" ] && rm -f "$HOME/storage"
+echo "Installing Python libraries..."
+pip install colorama pystyle requests
+
+echo "Setting up necessary access permissions..."
 termux-setup-storage
-sleep 2
-echo "[OK] Storage ready"
 
-echo "[..] Setting mirror to Cloudflare CDN…"
-SOURCES="/data/data/com.termux/files/usr/etc/apt/sources.list"
-SOURCES_D="/data/data/com.termux/files/usr/etc/apt/sources.list.d"
-mkdir -p "$SOURCES_D"
-echo "deb https://packages-cf.termux.dev/apt/termux-main stable main" \
-  > "$SOURCES"
-rm -f "$SOURCES_D"/*.list 2>/dev/null || true
-echo "[OK] Mirror: packages-cf.termux.dev"
+echo "Installing screen..."
+pkg install screen -y
 
-echo "[..] Updating package lists…"
-apt-get update -y 2>&1 | grep -E "^(Err|Get|Hit|Reading|Done)" || true
+echo "Creating autoexec directories if they don't exist..."
+mkdir -p /storage/emulated/0/Android/data/com.roblox.client/files/delta/autoexec
+mkdir -p /storage/emulated/0/Android/data/com.roblox.client/files/fluxus/autoexec
+mkdir -p /storage/emulated/0/RobloxClone001/Codex/Autoexec/
 
-echo "[..] Installing Python, pip, and sqlite3…"
-apt-get install -y --fix-missing python python-pip sqlite3 2>&1 | tail -3
-
-if ! command -v python &>/dev/null; then
-  echo "[..] Trying python3…"
-  apt-get install -y --fix-missing python3 python3-pip sqlite3 2>&1 | tail -3
-  if command -v python3 &>/dev/null; then
-    ln -sf "$(command -v python3)" \
-      /data/data/com.termux/files/usr/bin/python 2>/dev/null || true
-  fi
-fi
-
-if ! command -v python &>/dev/null; then
-  echo "[ERROR] Python could not be installed."
-  echo "        Run manually: pkg install python"
-  exit 1
-fi
-echo "[OK] $(python --version 2>&1)"
-
-echo "[..] Ensuring pip is available…"
-python -m ensurepip --upgrade 2>/dev/null || true
-python -m pip install --quiet --upgrade pip 2>/dev/null || true
-
-echo "[..] Installing requests…"
-python -m pip install --quiet requests && REQUESTS_OK=1 || REQUESTS_OK=0
-if [ "$REQUESTS_OK" -eq 0 ]; then
-  echo "[..] pip failed — trying apt fallback…"
-  apt-get install -y python-requests 2>/dev/null && REQUESTS_OK=1 || true
-fi
-if [ "$REQUESTS_OK" -eq 0 ]; then
-  echo "[..] Trying pip directly…"
-  pip install requests && REQUESTS_OK=1 || true
-fi
-if python -c "import requests" 2>/dev/null; then
-  echo "[OK] requests installed and importable"
-else
-  echo "[ERROR] requests could not be installed."
-  echo "        Run manually: python -m pip install requests"
-  exit 1
-fi
-
-echo "[..] Installing Pillow (screenshot detection)…"
-python -m pip install --quiet Pillow 2>/dev/null && PILLOW_OK=1 || PILLOW_OK=0
-if [ "$PILLOW_OK" -eq 0 ]; then
-  echo "[..] Trying apt for libjpeg & zlib…"
-  apt-get install -y libjpeg-turbo zlib 2>/dev/null || true
-  python -m pip install --quiet Pillow 2>/dev/null && PILLOW_OK=1 || true
-fi
-if python -c "import PIL" 2>/dev/null; then
-  echo "[OK] Pillow installed (screenshot detection active)"
-else
-  echo "[WARN] Pillow not available — screenshot detection disabled"
-fi
-
-echo "[..] Installing curl, tsu, android-tools…"
-apt-get install -y --fix-missing curl tsu android-tools 2>&1 | tail -3
-echo "[OK] System tools installed"
-
-DEST="/sdcard/Download/Rejoiner.py"
-echo "[..] Downloading Rejoiner.py…"
-
-if curl --version &>/dev/null 2>&1; then
-  curl -Ls \
-    "https://raw.githubusercontent.com/Dayvinksthik/Tool/refs/heads/main/Rejoiner.py" \
-    -o "$DEST"
-  if [ $? -ne 0 ] || [ ! -s "$DEST" ]; then
-    echo "[WARN] curl download failed, trying wget..."
-    wget -q -O "$DEST" \
-      "https://raw.githubusercontent.com/Dayvinksthik/Tool/refs/heads/main/Rejoiner.py"
-  fi
-else
-  echo "[..] curl not available, using wget..."
-  if ! command -v wget &>/dev/null; then
-    apt-get install -y wget
-  fi
-  wget -q -O "$DEST" \
-    "https://raw.githubusercontent.com/Dayvinksthik/Tool/refs/heads/main/Rejoiner.py"
-fi
-
-if [ -s "$DEST" ]; then
-  su -c "chmod 644 $DEST"
-  echo "[OK] Saved to $DEST"
-else
-  echo "[ERROR] Failed to download Rejoiner.py. Please download manually."
-  exit 1
-fi
-
-echo "[..] Verifying Rejoiner.py can start…"
-python -c "
-import os, sys, time, json, shutil, threading, subprocess, requests, sqlite3
-from datetime import datetime
-print('[OK] All imports OK')
-"
-
-LAUNCHER="/data/data/com.termux/files/usr/bin/rejoiner"
-cat > "$LAUNCHER" <<'EOF'
-#!/bin/bash
-cd /sdcard/Download
-python Rejoiner.py "$@"
-EOF
-chmod +x "$LAUNCHER"
-echo "[OK] Shortcut 'rejoiner' created"
-
-echo "[..] Checking Roblox packages…"
-if su -c "pm list packages com.roblox" 2>/dev/null | grep -q "com.roblox"; then
-  echo "[OK] Roblox packages found"
-else
-  echo "[WARN] No Roblox packages found – install clones first"
-fi
-
-echo ""
-echo "✅ Setup complete. Run: rejoiner"
+echo "Installation complete! -- Koala Collective | https://discord.gg/KoalaHub"
