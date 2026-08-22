@@ -30,4 +30,4 @@ mkdir -p /storage/emulated/0/Android/data/com.roblox.client/files/delta/autoexec
 mkdir -p /storage/emulated/0/Android/data/com.roblox.client/files/fluxus/autoexec
 mkdir -p /storage/emulated/0/RobloxClone001/Codex/Autoexec/
 
-echo "Installation complete! -- Koala Collective | https://discord.gg/KoalaHub"
+echo "Installation complete! -- Nexora Collective | https://discord.gg/dCMVzpBuTm"
