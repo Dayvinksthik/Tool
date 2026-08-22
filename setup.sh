@@ -27,6 +27,7 @@ pkg install screen -y
 
 echo "Creating autoexec directories if they don't exist..."
 mkdir -p /storage/emulated/0/Delta/Autoexecute/
+mkdir -p /storage/emulated/0/Delta/Workspace
 mkdir -p /storage/emulated/0/RobloxClone001/Codex/Autoexec/
 
 echo "Installation complete! -- Nexora Collective | https://discord.gg/dCMVzpBuTm"
