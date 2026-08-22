@@ -26,8 +26,7 @@ echo "Installing screen..."
 pkg install screen -y
 
 echo "Creating autoexec directories if they don't exist..."
-mkdir -p /storage/emulated/0/Android/data/com.roblox.client/files/delta/autoexec
-mkdir -p /storage/emulated/0/Android/data/com.roblox.client/files/fluxus/autoexec
+mkdir -p /storage/emulated/0/Delta/Autoexecute/
 mkdir -p /storage/emulated/0/RobloxClone001/Codex/Autoexec/
 
 echo "Installation complete! -- Nexora Collective | https://discord.gg/dCMVzpBuTm"
