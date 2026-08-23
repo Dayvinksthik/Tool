@@ -45,6 +45,6 @@ done
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  Setup complete!"
-echo "  Run: python Rejoin.py"
+echo "  Run: python Rejoiner.py"
 echo "  Nexora | discord.gg/dCMVzpBuTm"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
